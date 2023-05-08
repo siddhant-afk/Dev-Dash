@@ -1,6 +1,23 @@
 import streamlit as st
 import matplotlib.pyplot as plt
 import pandas as pd
+from sklearn.model_selection import train_test_split
+import pickle
+
+
+
+def load_model():
+    with open("saved_steps.pk1","rb") as file:
+        data = pickle.load(file)
+    return data
+
+
+
+data = load_model()
+model = data["model"]
+le_country = data["le_country"]
+le_education = data["le_education"]
+
 
 def shorten(categories,cutoff):
     cat_map = {}
@@ -50,7 +67,8 @@ def load_data():
     return df
 
 df = load_data()
-
+  
+    
 def show_explore_page():
     st.title("Explore Software Engineer Salaries")
 
@@ -87,3 +105,44 @@ def show_explore_page():
 
     data = df.groupby(["YearsCode"])["Salary"].mean().sort_values(ascending=True)
     st.line_chart(data)
+
+
+
+    st.write("""
+    #### Predicted Mean Salary Based on Experience
+    """)
+    
+    df1 = df
+    
+    df1["EdLevel"] = le_education.fit_transform(df1["EdLevel"])
+    df1["Country"] = le_country.fit_transform(df1["Country"])
+    
+
+    x = df1.drop("Salary",axis=1)
+    y = df1["Salary"]
+    x_train,x_test,y_train,y_test = train_test_split(x,y,test_size=0.3,random_state=42)
+    
+    y_preds = model.predict(x_test)
+   
+
+    
+    
+    new_df = x_test
+    new_df["Predicted Salary"] = y_preds
+    data1 = new_df.groupby(["YearsCode"])["Predicted Salary"].mean().sort_values(ascending = True )
+    st.line_chart(data1)
+
+    st.write("""
+    #### Actual Salary VS Predicted Salary
+    """)
+
+    fig,ax = plt.subplots()
+    ax.plot(df.groupby(["YearsCode"])["Salary"].mean())
+    ax.plot(new_df.groupby(["YearsCode"])["Predicted Salary"].mean())
+
+    st.pyplot(fig)
+
+
+
+    
+    
